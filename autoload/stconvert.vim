@@ -32,3 +32,13 @@ endfunction
 function! stconvert#T2S() range
     call g:T2S_Pyeval("stconvert.char_convert('t2s')")
 endfunction
+
+function! stconvert#Y2S() range
+    call g:T2S_Pyeval("stconvert.char_convert('y2s')")
+endfunction
+
+" " Define a function to get the base path of the plugin
+" function! stconvert#BasePath()
+"     " Get the path of this script file
+"     return expand('<sfile>:p:h')
+" endfunction
