@@ -5,6 +5,7 @@ import vim
 import re
 import json
 import os
+from pathlib import Path
 
 # use like this:
 #
@@ -20,33 +21,32 @@ import os
 #
 # 部分简体字在古代也是存在的, 比如 '云', '卜', 虽然有 '雲' 和 '蔔', 但是用于不同语境, 解决起来较为复杂, 本插件不考虑这种情况
 
-cur_py_file = os.path.abspath(__file__)
-chars_file = os.path.abspath(os.path.join(cur_py_file, '../../resource/chars_data.json'))
-# print(chars_file)
-chars_stream = open(chars_file)
-char_info_list: list[dict] = json.load(chars_stream)
+project_root = Path(__file__).resolve().parent.parent
+chars_file = os.path.abspath(os.path.join(project_root, 'resource/chars_data.json'))
+with open(chars_file) as chars_stream:
+    char_info_list: list[dict] = json.load(chars_stream)
 
 def char_convert(type):
     """
     type: s2t/t2s/yts
     """
-    chars_pair_dict: dict = {}
+    replaced_char_map: dict[str, str] = {}
     for char_info in char_info_list:
         fanti_chars: list[str] = char_info.get("fanti", [])
         yiti_chars: list[str] = char_info.get("yiti", [])
-        jianti_char: str = char_info.get("jianti")
+        jianti_char: str = char_info.get("jianti", "")
         if type == 's2t': # simplified => traditional
             if fanti_chars:
                 # 如果简体转繁体, 当同一个简体字对应多个繁体字时, 默认使用数据库种的第一个繁体字
-                chars_pair_dict[jianti_char] = fanti_chars[0]
+                replaced_char_map[jianti_char] = fanti_chars[0]
         elif type == 't2s': # traditional => simplified
             for fanti_char in fanti_chars:
-                chars_pair_dict[fanti_char] = jianti_char
+                replaced_char_map[fanti_char] = jianti_char
         elif type == 'y2s': # yiti => simplified
             for yiti_char in yiti_chars:
-                chars_pair_dict[yiti_char] = jianti_char
+                replaced_char_map[yiti_char] = jianti_char
         else:
-            print('type is unsupported!', type)
+            print(f"type '{type}' is unsupported!")
             exit(1)
 
     # 获取当前选中的范围
@@ -55,12 +55,6 @@ def char_convert(type):
 
     # 遍历选中的每一行
     for l in range(firstline, lastline + 1):
-        line = vim.current.buffer[l - 1]
-        newline = []
-        # for index, char in enumerate(line):
-        for char in line:
-            if char in chars_pair_dict:
-                newline.append(chars_pair_dict[char])
-            else:
-                newline.append(char)
+        line: list[str] = vim.current.buffer[l - 1]
+        newline: list[str] = [replaced_char_map.get(char, char) for char in line ]
         vim.current.buffer[l - 1] = ''.join(newline)
